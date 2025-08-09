@@ -1,40 +1,404 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-	<head>
-		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
 
-		<title>reveal.js</title>
+    <title> Git Internals</title>
 
-		<link rel="stylesheet" href="dist/reset.css">
-		<link rel="stylesheet" href="dist/reveal.css">
-		<link rel="stylesheet" href="dist/theme/black.css">
+    <link rel="stylesheet" href="dist/reset.css" />
+    <link rel="stylesheet" href="dist/reveal.css" />
+    <link rel="stylesheet" href="dist/theme/dracula.css" />
+    <link rel="stylesheet" href="plugin/highlight/monokai.css" />
+  </head>
+  <body>
+    <div class="reveal">
+      <div class="slides">
+        <section>
+          <div style="display: flex; flex-direction: column; height: 100%">
+            <div>
+              <h2> <strong> Git Internals</strong></h2>
+            </div>
 
-		<!-- Theme used for syntax highlighted code -->
-		<link rel="stylesheet" href="plugin/highlight/monokai.css">
-	</head>
-	<body>
-		<div class="reveal">
-			<div class="slides">
-				<section>Slide 1</section>
-				<section>Slide 2</section>
-			</div>
-		</div>
+            <p>
+              Understanding how Git works <br />
+              under the hood
+            </p>
+            
+          </div>
+        </section>
+        <section>
+          <section data-markdown>
+            <textarea data-template>
+    <div style="text-align: left;">
 
-		<script src="dist/reveal.js"></script>
-		<script src="plugin/notes/notes.js"></script>
-		<script src="plugin/markdown/markdown.js"></script>
-		<script src="plugin/highlight/highlight.js"></script>
-		<script>
-			// More info about initialization & config:
-			// - https://revealjs.com/initialization/
-			// - https://revealjs.com/config/
-			Reveal.initialize({
-				hash: true,
+### **What is Git, Really?**
 
-				// Learn about plugins: https://revealjs.com/plugins/
-				plugins: [ RevealMarkdown, RevealHighlight, RevealNotes ]
-			});
-		</script>
-	</body>
+Git is not just a version control system , it  is a **content-addressable filesystem** (wtf is that?)
+
+It means that at the core of Git is a simple **key-value data store**.
+
+You can insert any content into a Git repository,  
+and Git will hand you back a **unique key** 
+
+You can use that key later to retrieve the same data!
+ 
+    </div>
+ </textarea
+            >
+          </section>
+             <section>
+          <h3>Git Directory Layout</h3>
+          <pre><code>.git/
+├── objects/
+├── refs/
+├── HEAD 
+├── config
+└── index</code></pre>
+          <p>Each plays a critical role in tracking changes</p>
+        </section>
+<section >
+  <div style="text-align: left; font-size:30px">
+  <h3>SHA-1 in Git</h3>
+<ul>
+  <li>Git uses a 40-character code (SHA-1) to identify data.</li>
+  <li>This code is generated from the content itself, so identical content has the same code.</li>
+  <li>If the content changes, the code changes — guaranteeing detection of changes.</li>
+  <li>SHA-1 lets Git keep track of data efficiently and reliably.</li>
+</ul>
+
+
+  </div>
+</section>
+
+
+          <section data-markdown>
+            <textarea data-template>
+
+              <div style="text-align: left; font-size:22px">
+For now lets just initialize a git repository 
+              </div>
+
+
+```bash
+  $  git init batman 
+  $  cd batman 
+  $  ls .git/objects  # it will store our given data in key 
+  $  # currently it is empty 
+    
+
+```
+
+<div style="font-size: 22px; text-align:left;">
+
+
+ Lets look at an interesting command **git hash-object**
+ what it does is it takes the content from you and returns a unique key
+  that would be used to store it in your git database
+</div>  
+
+```bash
+  $  echo "jimjam" > waqib.txt #created a text file
+  $  git hash-object -w waqib.txt 
+  $  d2c28f271ff646876e01d4a7a8af90070178408b # our unique key  
+  $  ls .git/objects  # we can see our key is stored and the filename
+  $  d2/ info/ pack/  # is the first  two charecters of the key.
+    
+
+```
+
+<div style="font-size: 22px; text-align:left;">
+
+we can also check the contents of a key using **git cat-file**
+
+</div>  
+
+
+```bash
+  $  git cat-file -p d2c28f271ff646876e01d4a7a8af90070178408b 
+  $  jimjam
+  $  git cat-file -t  d2c28f271ff646876e01d4a7a8af90070178408b
+  $  blob  # blob ?  
+    
+
+```
+
+
+
+
+            </textarea>
+          </section>
+        </section>
+        <section>
+          <section>
+            <h3><b> Objects in Git</b></h3>
+            <ul style="font-size: 30px">
+              <li>
+               <b> Blob</b>  – stores file content (This is what we saw just now )
+              </li>
+              <li> <b> Tree</b> – stores directory structure</li>
+              <li><b>Commit</b> – points to a tree and has metadata</li>
+              <li><b>Tag</b> – labels a commit</li>
+            </ul>
+          </section>
+          <section data-markdown>
+            <textarea
+              name="
+  "
+              id=""
+              data-template=""
+            >
+
+  <div style="text-align: left; font-size:25px" >
+
+ ## Tree objects
+ All the contents  are stored as **tree** and **blob** objects, with trees corresponding  entries and blobs corresponding more or less to inodes or file contents.
+  A single tree object contains one or more entries, each of which is the **SHA-1 hash** of a **blob** or **subtree** with its associated mode, type, and filename. 
+
+  </div>
+
+  <div>
+
+    
+  </div>
+<div style="text-align: left; font-size:30px">
+
+### Creating tree with subtrees
+
+
+```
+# file structure
+├── dir/file2.txt
+|── file1.txt 
+
+echo -e "100644 blob 8c7f8d...\tfile2.txt" > dir_tree.txt 
+git mktree < dir_tree.txt # [mode] [type] [hash] [tab] [filename]
+
+echo -e "100644 blob e69de29...\tfile1.txt" > upper_tree.txt
+echo -e "040000 tree a1b2c3...\tdir" >> upper_tree.txt
+
+git mktree < upper_tree.txt
+# → returns final tree SHA: d4e5f6...
+
+git cat-file -p d4e5f6...
+100644 blob e69de29...	file1.txt
+040000 tree a1b2c3...	dir
+
+```
+</div>
+
+
+</textarea
+            >
+          </section>
+
+          <section>
+            <h3 style="text-align: left;">Tree Structure</h3>
+            <img src="./pic.png" alt="" style="width: 800px; height:700px"/>
+          </section>
+          <section data-markdown>
+            <textarea data-template>
+
+              <div style="font-size: 30px; text-align:left">
+
+               ## Commit objects 
+              now with the **trees** and **blobs** we stored a snapshot of the files but we dont know 
+               who saved the snapshots, when they were saved, or why they were saved. This is the basic information that the <b> commit object </b>stores for you. <br>
+                Example:
+              ```
+              $ echo "first commit yay" | git commit-tree d8329f # this is the tree's key
+                fdhe1lo3344e67ab068f836878b6c4951e3b15f32
+
+              $ git cat-file -p fdf4fc3
+              tree d8329fc1cc938780ffdd9f94e0d364e0ea74f579
+              author Waqib sk [windowsUser@gmail.com] 1243040974 -0700
+              committer Waqib sk [windowsUser@gmail.com] 1243040974 -0700
+
+              first commit yay 
+
+              ```
+
+              </div>
+
+            </textarea>
+          </section>
+       </section>
+        <section >
+          <section data-markdown>
+            <textarea name="" id="" data-template>
+    <div style="font-size: 25px; text-align:left">
+    
+    ## **Git Reference** 
+      References are human-friendly names pointing to Git objects (usually commits).
+
+      Stored in `.git/refs/`, with common subfolders: <br>
+
+      `refs/heads/` → Local branches (e.g., main) <br>
+      `refs/tags/` → Tags <br>
+      `refs/remotes/` → Remote-tracking branches <br>
+
+      ```
+      #This manually creates a reference called master
+
+      $ echo [commit-sha] > .git/refs/heads/master
+
+      ```
+
+
+    </div>
+    </textarea
+            >
+          </section>
+          <section data-markdown=>
+            <textarea name="" id="" data-template>
+    <div style="font-size: 25px; text-align:left">
+    
+    ### What is a branch?
+
+    A branch is just a ref pointing to a commit . <br>
+    `git branch [name]` works internally like this: <br>
+
+    ```bash
+
+     $ git update-ref refs/heads/[name] [current-commit-sha]
+
+    ```
+
+    
+    ### HEAD: The Current Checkout
+
+    `HEAD` is the ref to the currently checked out branch 
+
+    ### Remote References
+
+    When you git push, Git stores refs in `.git/refs/remotes/[remote]/`. <br>
+    These are read-only bookmarks to the last known state of the remote branch.
+
+
+    </div>
+    </textarea
+            >
+          </section>
+        </section>
+<section>
+       <section data-markdown>
+            <textarea data-template>
+
+              <div style="font-size: 25px; text-align:left">
+
+               ##  Workflow of some normal commands
+                ## **git add:**     <br>
+
+                git maintains three areas: <br>
+                1. Working directory - your actual files on disk 
+                2. index /staging are - a snap shot what will go in the next commit 
+                3. repository(.git/objects) - permanent history
+
+                When you run :
+                ```
+                git add file.txt
+                ```
+
+                Git: <br>
+
+                1. Calculates a SHA-1 hash of the file’s content (object ID).
+                2. Compresses the file into a blob object and stores it in .git/objects/ if it’s not already there.
+                3. Updates the index file (.git/index) to map that file’s name → blob object ID.
+
+                No history is changed yet — only the index is updated
+                
+
+                
+               </div>
+
+            </textarea>
+          </section>
+       <section data-markdown>
+            <textarea data-template>
+
+              <div style="font-size: 25px; text-align:left">
+
+              
+                ## **git commit:**     <br>
+                Reads the staging area and :
+
+                1. Creates a tree object: a hierarchical snapshot of all files & directories (their names and blob IDs)
+                2. Creates a commit object that stores :
+              <ul style="list-style-type: circle;">
+                <li>The tree object ID.</li>
+                <li>The commit message</li>
+                <li>Author & committer info (from git config or env vars).</li>
+                <li>Parent commit(s) (except for the very first commit).</li>
+                <li>A timestamp</li>
+              </ul>
+                3. Stores both tree and commit objects in .git/objects/
+               </div>
+               <br>
+
+               <div style="font-size: 30px; text-align:left" >
+              Updates the branch pointer in <strong> .git/refs/heads/[branch] </strong>to point to the new commit object. <br>
+
+              So the repo history moves forward, but only locally.
+ 
+               </div>
+           </textarea>
+          </section>
+       <section data-markdown>
+            <textarea data-template>
+
+              <div style="font-size: 30px; text-align:left">
+
+               ## **git push:**     <br>
+             
+                when you do git push ..it 
+              <ul style="list-style-type: circle;">
+                <li>Contacts the remote repository using the configured protocol (HTTP(S), SSH, or Git).</li>
+                <li>Compares your local refs (branches/tags) with the remote’s refs.</li>
+                <li>Finds which commit, tree, and blob objects are missing on the remote.</li>
+                <li>Sends those missing objects to the remote’s object database.</li>
+                <li>Updates the remote ref (e.g., <code>refs/heads/main</code>) to point to your latest commit.</li>
+              </ul>
+ 
+               </div>
+
+            </textarea>
+          </section>
+
+
+
+
+
+</section>
+       
+
+        <section>
+          <h3><strong>  Thank you </strong></h3>
+         <div>
+          made by <b> @Waqibsk
+</b>         </div> 
+<div>
+  <strong>Here is my QR :) </strong>
+  <div>
+
+  <img src="./qr.png" alt="" style="height: 400px;">
+  </div>
+</div>
+        </section>
+      </div>
+    </div>
+
+    <script src="dist/reveal.js"></script>
+    <script src="plugin/notes/notes.js"></script>
+    <script src="plugin/markdown/markdown.js"></script>
+    <script src="plugin/highlight/highlight.js"></script>
+    <script>
+      Reveal.initialize({
+        hash: true,
+        plugins: [RevealMarkdown, RevealHighlight, RevealNotes],
+      });
+    </script>
+  </body>
 </html>
